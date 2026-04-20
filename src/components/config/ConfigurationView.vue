@@ -151,7 +151,7 @@ const iconOptions = computed(() =>
         <div class="config-meta">
           <div class="config-meta-row">
             <span class="config-label">可执行文件</span>
-            <p :title="config.executablePath">{{ config.executablePath || "未解析" }}</p>
+            <p :title="config.executablePath">{{ config.executablePath || "未找到" }}</p>
           </div>
           <div class="config-meta-row">
             <span class="config-label">用户资料</span>

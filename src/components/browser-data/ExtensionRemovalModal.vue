@@ -63,7 +63,7 @@ const resultSummary = computed(() => {
 
       <template v-if="mode === 'confirm'">
         <p class="modal-copy">
-          将从 {{ confirmSummary.profileCount }} 个资料中删除 {{ confirmSummary.extensionCount }} 个插件。
+          将从 {{ confirmSummary.profileCount }} 个资料中删除 {{ confirmSummary.extensionCount }} 个插件。注意：你需要关闭所有浏览器。
         </p>
 
         <div class="modal-actions">

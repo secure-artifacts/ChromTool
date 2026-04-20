@@ -57,7 +57,7 @@ const resultSummary = computed(() => {
 
       <template v-if="mode === 'confirm'">
         <p class="modal-copy">
-          将从 {{ profileCount }} 个资料中删除 {{ bookmarkCount }} 个书签。
+          将从 {{ profileCount }} 个资料中删除 {{ bookmarkCount }} 个书签。注意：你需要关闭所有浏览器。
         </p>
 
         <div class="modal-actions">

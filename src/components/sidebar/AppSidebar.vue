@@ -64,7 +64,7 @@ const emit = defineEmits<{
     </div>
 
     <div v-else class="sidebar-empty">
-      <p>暂未找到受支持的 Chromium 浏览器数据。</p>
+      <p>空空如也。</p>
     </div>
 
     <button

@@ -157,7 +157,7 @@ const emit = defineEmits<{
       type="button"
       @click="emit('update:activeSection', 'passwords')"
     >
-      <span>已保存登录</span>
+      <span>密码</span>
       <span class="count-pill">{{ sectionCount("passwords") }}</span>
     </button>
     <button
