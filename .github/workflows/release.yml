@@ -12,19 +12,22 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            bundle_target: msi
-            archive_name: ChromTool-windows-x64.7z
+            bundle_targets: msi
+            archive_suffix: windows-x64
             built_app_path: src-tauri/target/release/ChromTool.exe
+            installer_path: src-tauri/target/release/bundle/msi/*.msi
           - os: macos-latest
-            bundle_target: app
-            archive_name: ChromTool-macos.7z
+            bundle_targets: app,dmg
+            archive_suffix: macos
             built_app_path: src-tauri/target/release/bundle/macos/ChromTool.app
+            installer_path: src-tauri/target/release/bundle/dmg/*.dmg
 
     runs-on: ${{ matrix.os }}
     permissions:
       id-token: write
       contents: write
       attestations: write
+      artifact-metadata: write
 
     steps:
       - name: Checkout
@@ -54,7 +57,7 @@ jobs:
         run: brew install p7zip
 
       - name: Build Tauri app
-        run: pnpm tauri build --bundles ${{ matrix.bundle_target }}
+        run: pnpm tauri build --bundles ${{ matrix.bundle_targets }}
 
       - name: Create archive directory
         shell: pwsh
@@ -63,22 +66,26 @@ jobs:
       - name: Archive Windows executable
         if: runner.os == 'Windows'
         shell: pwsh
-        run: 7z a "release-artifacts/${{ matrix.archive_name }}" "${{ matrix.built_app_path }}"
+        run: 7z a "release-artifacts/ChromTool-${{ github.ref_name }}-${{ matrix.archive_suffix }}.7z" "${{ matrix.built_app_path }}"
 
       - name: Archive macOS app bundle
         if: runner.os == 'macOS'
-        run: 7z a "release-artifacts/${{ matrix.archive_name }}" "${{ matrix.built_app_path }}"
+        run: 7z a "release-artifacts/ChromTool-${{ github.ref_name }}-${{ matrix.archive_suffix }}.7z" "${{ matrix.built_app_path }}"
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: release-artifacts/${{ matrix.archive_name }}
+          subject-path: |
+            release-artifacts/ChromTool-${{ github.ref_name }}-${{ matrix.archive_suffix }}.7z
+            ${{ matrix.installer_path }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.archive_name }}
-          path: release-artifacts/${{ matrix.archive_name }}
+          name: ${{ runner.os }}-release-assets
+          path: |
+            release-artifacts/ChromTool-${{ github.ref_name }}-${{ matrix.archive_suffix }}.7z
+            ${{ matrix.installer_path }}
 
   release:
     needs: build
