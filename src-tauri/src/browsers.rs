@@ -140,12 +140,20 @@ pub fn browser_definitions() -> Vec<BrowserDefinition> {
             id: "yandex",
             name: "Yandex Browser",
             local_app_data_segments: &["Yandex", "YandexBrowser", "User Data"],
-            executable_candidates: &[ExecutableCandidate::LocalAppData(&[
-                "Yandex",
-                "YandexBrowser",
-                "Application",
-                "browser.exe",
-            ])],
+            executable_candidates: &[
+                ExecutableCandidate::LocalAppData(&[
+                    "Yandex",
+                    "YandexBrowser",
+                    "Application",
+                    "browser.exe",
+                ]),
+                ExecutableCandidate::ProgramFiles(&[
+                    "Yandex",
+                    "YandexBrowser",
+                    "Application",
+                    "browser.exe",
+                ]),
+            ],
         },
         BrowserDefinition {
             id: "chromium",
