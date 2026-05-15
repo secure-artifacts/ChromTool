@@ -10,6 +10,7 @@ export type ProfileSummary = {
   id: string;
   name: string;
   email: string | null;
+  emails: string[];
   avatarDataUrl: string | null;
   avatarIcon: string | null;
   defaultAvatarFillColor: number | null;

@@ -204,13 +204,8 @@ fn build_profile_summary(
     .unwrap_or(profile_id)
     .to_string();
 
-    let email = first_non_empty([
-        profile_info
-            .and_then(|value| value.get("user_name"))
-            .and_then(Value::as_str),
-        None,
-    ])
-    .map(str::to_string);
+    let emails = collect_profile_emails(profile_path, profile_info);
+    let email = emails.first().cloned();
 
     let avatar_data_url = resolve_profile_avatar(root, profile_path, profile_info);
     let avatar_icon = profile_info
@@ -234,6 +229,7 @@ fn build_profile_summary(
         id: profile_id.to_string(),
         name,
         email,
+        emails,
         avatar_data_url,
         avatar_icon,
         default_avatar_fill_color,
@@ -242,6 +238,46 @@ fn build_profile_summary(
         path: profile_path.display().to_string(),
         history_cleanup: scan_history_cleanup_status(profile_path),
     }
+}
+
+fn collect_profile_emails(profile_path: &Path, profile_info: Option<&Value>) -> Vec<String> {
+    let mut emails = Vec::new();
+
+    if let Some(email) = profile_info
+        .and_then(|value| value.get("user_name"))
+        .and_then(Value::as_str)
+    {
+        push_unique_email(&mut emails, email);
+    }
+
+    let preferences_path = profile_path.join(decoded_literal("UHJlZmVyZW5jZXM="));
+    if let Some(preferences) = read_json_file(&preferences_path) {
+        if let Some(account_info) = preferences.get("account_info").and_then(Value::as_array) {
+            for account in account_info {
+                if let Some(email) = account.get("email").and_then(Value::as_str) {
+                    push_unique_email(&mut emails, email);
+                }
+            }
+        }
+    }
+
+    emails
+}
+
+fn push_unique_email(emails: &mut Vec<String>, email: &str) {
+    let normalized = email.trim();
+    if normalized.is_empty() {
+        return;
+    }
+
+    if emails
+        .iter()
+        .any(|existing| existing.eq_ignore_ascii_case(normalized))
+    {
+        return;
+    }
+
+    emails.push(normalized.to_string());
 }
 
 fn scan_history_cleanup_status(profile_path: &Path) -> HistoryCleanupSummary {

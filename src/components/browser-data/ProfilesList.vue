@@ -31,6 +31,19 @@ const allSelected = computed(
 function isSelected(profileId: string) {
   return props.selectedProfileIds.includes(profileId);
 }
+
+function profileEmails(profile: ProfileSummary) {
+  return profile.emails?.length ? profile.emails : profile.email ? [profile.email] : [];
+}
+
+function visibleEmail(profile: ProfileSummary) {
+  return profileEmails(profile)[0] ?? "";
+}
+
+function emailTooltip(profile: ProfileSummary) {
+  const emails = profileEmails(profile);
+  return emails.length ? emails.join("\n") : undefined;
+}
 </script>
 
 <template>
@@ -103,8 +116,11 @@ function isSelected(profileId: string) {
           <div class="row-cell primary-cell">
             <strong>{{ profile.name }}</strong>
           </div>
-          <div class="row-cell muted-cell" :title="profile.email ?? undefined">
-            {{ profile.email || "" }}
+          <div class="row-cell muted-cell email-cell" :title="emailTooltip(profile)">
+            <span class="email-text">{{ visibleEmail(profile) }}</span>
+            <span v-if="profileEmails(profile).length > 1" class="email-count">
+              +{{ profileEmails(profile).length - 1 }}
+            </span>
           </div>
           <div class="row-cell">
             <span class="badge neutral">{{ profile.id }}</span>
@@ -321,9 +337,33 @@ function isSelected(profileId: string) {
 .muted-cell {
   color: var(--muted);
   font-size: 0.86rem;
+}
+
+.email-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.email-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.email-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 26px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(47, 111, 237, 0.1);
+  color: var(--accent);
+  font-size: 0.74rem;
+  font-weight: 700;
 }
 
 .actions-cell {

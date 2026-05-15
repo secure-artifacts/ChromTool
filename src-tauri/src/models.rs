@@ -46,6 +46,7 @@ pub struct ProfileSummary {
     pub id: String,
     pub name: String,
     pub email: Option<String>,
+    pub emails: Vec<String>,
     pub avatar_data_url: Option<String>,
     pub avatar_icon: Option<String>,
     pub default_avatar_fill_color: Option<i64>,
