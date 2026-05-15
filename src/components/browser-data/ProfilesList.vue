@@ -139,6 +139,7 @@ function isSelected(profileId: string) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
   min-height: 0;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 22px;
@@ -358,9 +359,17 @@ function isSelected(profileId: string) {
   }
 
   .profiles-grid {
-    grid-template-columns: 52px 56px minmax(0, 1fr) 96px;
+    grid-template-columns: 40px minmax(0, 1fr) 72px;
+    gap: 8px;
   }
 
+  .data-table-header,
+  .data-table-row {
+    padding-left: 8px;
+    padding-right: 12px;
+  }
+
+  .profiles-grid > :nth-child(2),
   .profiles-grid > :nth-child(4),
   .profiles-grid > :nth-child(5) {
     display: none;

@@ -362,10 +362,29 @@ const emit = defineEmits<{
   margin-top: 0;
   padding: 6px;
   flex-shrink: 0;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
   border: 1px solid var(--panel-border);
   border-radius: 22px;
   background: var(--panel);
   box-shadow: var(--shadow);
+}
+
+.section-tabs::-webkit-scrollbar {
+  height: 8px;
+}
+
+.section-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.section-tabs::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.36);
+  background-clip: padding-box;
 }
 
 .section-tab {
@@ -373,8 +392,8 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-width: 0;
-  flex: 1;
+  min-width: 104px;
+  flex: 1 0 104px;
   padding: 8px 10px;
   border-radius: 13px;
   color: var(--muted);
@@ -385,6 +404,12 @@ const emit = defineEmits<{
     color 160ms ease,
     transform 160ms ease,
     box-shadow 160ms ease;
+}
+
+.section-tab > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .section-tab:hover {
@@ -399,10 +424,13 @@ const emit = defineEmits<{
 
 .content-scroll-area {
   display: flex;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .content-scroll-area > * {
   flex: 1;
+  min-width: 0;
   min-height: 0;
 }
 </style>
