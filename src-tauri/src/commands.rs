@@ -16,20 +16,24 @@ use crate::{
     scanner,
     utils::decode_base64_literal,
 };
-use tauri::AppHandle;
+use tauri::{async_runtime, AppHandle};
 use serde_json::Value;
 
 #[tauri::command]
-pub fn scan_browsers(app: AppHandle) -> Result<ScanResponse, String> {
-    scanner::scan_browsers(&app)
+pub async fn scan_browsers(app: AppHandle) -> Result<ScanResponse, String> {
+    async_runtime::spawn_blocking(move || scanner::scan_browsers(&app))
+        .await
+        .map_err(|error| format!("Failed to join browser scan task: {error}"))?
 }
 
 #[tauri::command]
-pub fn scan_password_sites(
+pub async fn scan_password_sites(
     app: AppHandle,
     browser_id: String,
 ) -> Result<PasswordSitesResponse, String> {
-    scanner::scan_password_sites(&app, &browser_id)
+    async_runtime::spawn_blocking(move || scanner::scan_password_sites(&app, &browser_id))
+        .await
+        .map_err(|error| format!("Failed to join password site scan task: {error}"))?
 }
 
 #[tauri::command]
