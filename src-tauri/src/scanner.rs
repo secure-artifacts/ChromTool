@@ -11,10 +11,10 @@ use crate::{
     config_store,
     models::{
         AssociatedProfileSummary, BookmarkAssociatedProfileSummary, BookmarkSummary,
-        BrowserConfigEntry, BrowserStats, BrowserView, CleanupFileStatus, ExtensionSummary,
-        ExtensionAssociatedProfileSummary, ExtensionInstallSourceSummary, HistoryCleanupSummary,
-        PasswordSiteSummary, PasswordSitesResponse, ProfileSummary, ScanResponse, TempBookmark,
-        TempExtension, TempPasswordSite,
+        BrowserConfigEntry, BrowserStats, BrowserView, CleanupFileStatus,
+        ExtensionAssociatedProfileSummary, ExtensionInstallSourceSummary, ExtensionSummary,
+        HistoryCleanupSummary, PasswordSiteSummary, PasswordSitesResponse, ProfileSummary,
+        ScanResponse, TempBookmark, TempExtension, TempPasswordSite,
     },
     utils::{
         copy_sqlite_database_to_temp, decode_base64_literal, first_non_empty,
@@ -29,6 +29,14 @@ pub fn scan_browsers(app: &AppHandle) -> Result<ScanResponse, String> {
         .collect();
 
     Ok(ScanResponse { browsers })
+}
+
+pub fn scan_browser_by_id(
+    app: &AppHandle,
+    browser_id: &str,
+) -> Result<Option<BrowserView>, String> {
+    let config = config_store::find_browser_config(app, browser_id)?;
+    Ok(scan_browser(config))
 }
 
 pub fn scan_password_sites(
@@ -293,8 +301,7 @@ fn scan_extensions_for_profile(
     profile: &ProfileSummary,
     extensions: &mut BTreeMap<String, TempExtension>,
 ) {
-    let secure_preferences_path =
-        profile_path.join(decoded_literal("U2VjdXJlIFByZWZlcmVuY2Vz"));
+    let secure_preferences_path = profile_path.join(decoded_literal("U2VjdXJlIFByZWZlcmVuY2Vz"));
     let Some(secure_preferences) = read_json_file(&secure_preferences_path) else {
         return;
     };
@@ -358,10 +365,8 @@ fn scan_extensions_for_profile(
             entry.icon_data_url = icon_data_url.clone();
         }
         entry.profile_ids.insert(profile.id.clone());
-        entry
-            .profiles
-            .entry(profile.id.clone())
-            .or_insert_with(|| ExtensionAssociatedProfileSummary {
+        entry.profiles.entry(profile.id.clone()).or_insert_with(|| {
+            ExtensionAssociatedProfileSummary {
                 id: profile.id.clone(),
                 name: profile.name.clone(),
                 avatar_data_url: profile.avatar_data_url.clone(),
@@ -370,7 +375,8 @@ fn scan_extensions_for_profile(
                 default_avatar_stroke_color: profile.default_avatar_stroke_color,
                 avatar_label: profile.avatar_label.clone(),
                 install_source: install_source.summary(),
-            });
+            }
+        });
     }
 }
 

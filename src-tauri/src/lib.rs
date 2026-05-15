@@ -12,6 +12,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::scan_browsers,
+            commands::scan_browser,
             commands::scan_password_sites,
             commands::list_browser_configs,
             commands::create_custom_browser_config,

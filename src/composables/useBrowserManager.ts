@@ -202,6 +202,57 @@ export function useBrowserManager() {
     await Promise.all([loadBrowserConfigs(), scanBrowsers()]);
   }
 
+  async function refreshCurrentBrowser() {
+    if (page.value === "configuration" || !selectedBrowserId.value) {
+      await refreshAll();
+      return;
+    }
+
+    const browserId = selectedBrowserId.value;
+    const shouldRefreshPasswordSites = hasLoadedPasswordSites(browserId);
+    loading.value = true;
+    error.value = "";
+
+    try {
+      const [browser, passwordSitesResponse] = await Promise.all([
+        invoke<BrowserView | null>("scan_browser", { browserId }),
+        shouldRefreshPasswordSites
+          ? invoke<PasswordSitesResponse>("scan_password_sites", { browserId })
+          : Promise.resolve(null),
+      ]);
+
+      if (!browser) {
+        response.value = {
+          browsers: response.value.browsers.filter((item) => item.browserId !== browserId),
+        };
+        return;
+      }
+
+      if (passwordSitesResponse) {
+        browser.passwordSites = passwordSitesResponse.passwordSites;
+        browser.stats.passwordSiteCount = passwordSitesResponse.passwordSites.length;
+      }
+
+      const existingIndex = response.value.browsers.findIndex(
+        (item) => item.browserId === browserId,
+      );
+      const browsers =
+        existingIndex >= 0
+          ? response.value.browsers.map((item, index) =>
+              index === existingIndex ? browser : item,
+            )
+          : [...response.value.browsers, browser];
+
+      response.value = { browsers };
+      passwordSitesError.value = "";
+    } catch (refreshError) {
+      error.value =
+        refreshError instanceof Error ? refreshError.message : "刷新当前浏览器数据失败。";
+    } finally {
+      loading.value = false;
+    }
+  }
+
   async function openBrowserProfile(browserId: string, profileId: string, resetError = true) {
     const profileKey = `${browserId}:${profileId}`;
     openingProfileKey.value = profileKey;
@@ -1117,6 +1168,7 @@ export function useBrowserManager() {
     passwordSitesLoading,
     profileSelectedIds,
     profileSortKey,
+    refreshCurrentBrowser,
     refreshAll,
     savingConfig,
     sectionCount,

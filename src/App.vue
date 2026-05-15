@@ -74,7 +74,7 @@ const {
   passwordSitesLoading,
   profileSelectedIds,
   profileSortKey,
-  refreshAll,
+  refreshCurrentBrowser,
   savingConfig,
   sectionCount,
   selectedBrowserId,
@@ -120,7 +120,7 @@ const {
       :app-version="appVersion"
       @select-browser="selectedBrowserId = $event; page = 'browserData'"
       @select-configuration="page = 'configuration'"
-      @refresh="refreshAll"
+      @refresh="refreshCurrentBrowser"
     />
 
     <main class="content-panel">

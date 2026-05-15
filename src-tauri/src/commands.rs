@@ -7,21 +7,31 @@ use std::{
 use crate::{
     config_store,
     models::{
-        BookmarkRemovalRequest, BrowserConfigListResponse, CleanupHistoryInput,
+        BookmarkRemovalRequest, BrowserConfigListResponse, BrowserView, CleanupHistoryInput,
         CleanupHistoryResponse, CleanupHistoryResult, CreateCustomBrowserConfigInput,
-        ExtensionInstallSourceSummary, RemoveBookmarkResult, RemoveBookmarksInput,
-        RemoveBookmarksResponse, RemoveExtensionResult, RemoveExtensionsInput,
-        RemoveExtensionsResponse, PasswordSitesResponse, ScanResponse,
+        ExtensionInstallSourceSummary, PasswordSitesResponse, RemoveBookmarkResult,
+        RemoveBookmarksInput, RemoveBookmarksResponse, RemoveExtensionResult,
+        RemoveExtensionsInput, RemoveExtensionsResponse, ScanResponse,
     },
     scanner,
     utils::decode_base64_literal,
 };
-use tauri::{async_runtime, AppHandle};
 use serde_json::Value;
+use tauri::{async_runtime, AppHandle};
 
 #[tauri::command]
 pub async fn scan_browsers(app: AppHandle) -> Result<ScanResponse, String> {
     async_runtime::spawn_blocking(move || scanner::scan_browsers(&app))
+        .await
+        .map_err(|error| format!("Failed to join browser scan task: {error}"))?
+}
+
+#[tauri::command]
+pub async fn scan_browser(
+    app: AppHandle,
+    browser_id: String,
+) -> Result<Option<BrowserView>, String> {
+    async_runtime::spawn_blocking(move || scanner::scan_browser_by_id(&app, &browser_id))
         .await
         .map_err(|error| format!("Failed to join browser scan task: {error}"))?
 }
@@ -367,14 +377,15 @@ fn remove_bookmark_from_profile(
     let mut removed_files = Vec::new();
     let mut skipped_files = Vec::new();
 
-    let removed_backup = remove_bookmark_backups(profile_path).map_err(|error| RemoveBookmarkResult {
-        url: removal.url.clone(),
-        profile_id: profile_id.to_string(),
-        removed_count: 0,
-        removed_files: removed_files.clone(),
-        skipped_files: skipped_files.clone(),
-        error: Some(error),
-    });
+    let removed_backup =
+        remove_bookmark_backups(profile_path).map_err(|error| RemoveBookmarkResult {
+            url: removal.url.clone(),
+            profile_id: profile_id.to_string(),
+            removed_count: 0,
+            removed_files: removed_files.clone(),
+            skipped_files: skipped_files.clone(),
+            error: Some(error),
+        });
     let removed_backup = match removed_backup {
         Ok(value) => value,
         Err(result) => return result,
@@ -460,11 +471,7 @@ fn remove_extension_from_secure_preferences(
         .unwrap_or(ExtensionInstallSourceSummary::External);
 
     let mut changed = false;
-    changed |= remove_object_key(
-        &mut document,
-        &["extensions", "settings"],
-        extension_id,
-    );
+    changed |= remove_object_key(&mut document, &["extensions", "settings"], extension_id);
     changed |= remove_object_key(
         &mut document,
         &["protection", "macs", "extensions", "settings"],
@@ -472,7 +479,12 @@ fn remove_extension_from_secure_preferences(
     );
     changed |= remove_object_key(
         &mut document,
-        &["protection", "macs", "extensions", "settings_encrypted_hash"],
+        &[
+            "protection",
+            "macs",
+            "extensions",
+            "settings_encrypted_hash",
+        ],
         extension_id,
     );
 
@@ -488,7 +500,8 @@ fn remove_extension_from_preferences(path: &Path, extension_id: &str) -> Result<
     let mut document = read_json_document(path)?;
     let mut changed = false;
 
-    if let Some(pinned_extensions) = get_value_mut(&mut document, &["extensions", "pinned_extensions"])
+    if let Some(pinned_extensions) =
+        get_value_mut(&mut document, &["extensions", "pinned_extensions"])
     {
         if let Some(array) = pinned_extensions.as_array_mut() {
             let original_len = array.len();
@@ -564,10 +577,10 @@ fn cleanup_file_names() -> Vec<String> {
         "VmlzaXRlZCBMaW5rcw==",
         "U2hvcnRjdXRz",
     ]
-        .into_iter()
-        .map(decoded_literal)
-        .filter(|value| !value.is_empty())
-        .collect()
+    .into_iter()
+    .map(decoded_literal)
+    .filter(|value| !value.is_empty())
+    .collect()
 }
 
 fn cleanup_sessions_directory(path: &Path) -> Result<bool, std::io::Error> {
