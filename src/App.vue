@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nextTick } from "vue";
 import BrowserDataView from "./components/browser-data/BrowserDataView.vue";
 import ConfigurationView from "./components/config/ConfigurationView.vue";
 import AppSidebar from "./components/sidebar/AppSidebar.vue";
@@ -106,6 +107,62 @@ const {
   toggleHistoryProfile,
   closeAssociatedProfilesModal,
 } = useBrowserManager();
+
+const tableScrollPositions = new Map<string, { left: number; top: number }>();
+
+function activeTableScrollKey() {
+  const browserId = currentBrowser.value?.browserId ?? selectedBrowserId.value;
+  if (!browserId || page.value !== "browserData") return "";
+
+  return `${browserId}:${activeSection.value}`;
+}
+
+function currentTableScrollTarget() {
+  return document.querySelector<HTMLElement>(".content-scroll-area .data-table-body");
+}
+
+function saveActiveTableScroll() {
+  const key = activeTableScrollKey();
+  const scrollTarget = currentTableScrollTarget();
+  if (!key || !scrollTarget) return;
+
+  tableScrollPositions.set(key, {
+    left: scrollTarget.scrollLeft,
+    top: scrollTarget.scrollTop,
+  });
+}
+
+async function restoreActiveTableScroll() {
+  const key = activeTableScrollKey();
+  if (!key) return;
+
+  const scrollPosition = tableScrollPositions.get(key);
+  if (!scrollPosition) return;
+
+  await nextTick();
+  window.requestAnimationFrame(() => {
+    currentTableScrollTarget()?.scrollTo(scrollPosition);
+  });
+}
+
+async function selectBrowser(browserId: string) {
+  saveActiveTableScroll();
+  selectedBrowserId.value = browserId;
+  page.value = "browserData";
+  await restoreActiveTableScroll();
+}
+
+async function selectBrowserSection(section: typeof activeSection.value) {
+  saveActiveTableScroll();
+  activeSection.value = section;
+  await restoreActiveTableScroll();
+}
+
+async function refreshCurrentBrowserPreservingScroll() {
+  saveActiveTableScroll();
+  await refreshCurrentBrowser();
+  await restoreActiveTableScroll();
+}
 </script>
 
 <template>
@@ -118,9 +175,9 @@ const {
       :configs-loading="configsLoading"
       :browser-monogram="browserMonogram"
       :app-version="appVersion"
-      @select-browser="selectedBrowserId = $event; page = 'browserData'"
+      @select-browser="selectBrowser"
       @select-configuration="page = 'configuration'"
-      @refresh="refreshCurrentBrowser"
+      @refresh="refreshCurrentBrowserPreservingScroll"
     />
 
     <main class="content-panel">
@@ -220,7 +277,7 @@ const {
         :is-opening-profile="isOpeningProfile"
         :extension-monogram="extensionMonogram"
         :associated-profiles-modal="associatedProfilesModal"
-        @update:active-section="activeSection = $event"
+        @update:active-section="selectBrowserSection"
         @update:profile-sort-key="profileSortKey = $event"
         @update:extension-sort-key="extensionSortKey = $event"
         @update:bookmark-sort-key="bookmarkSortKey = $event"
