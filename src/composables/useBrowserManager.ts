@@ -49,6 +49,8 @@ export function useBrowserManager() {
   });
   const selectedBrowserId = ref("");
   const activeSection = ref<ActiveSection>("profiles");
+  const profileSelectedIds = ref<string[]>([]);
+  const openingSelectedProfiles = ref(false);
   const associatedProfilesModal = ref<{
     title: string;
     browserId: string;
@@ -137,6 +139,8 @@ export function useBrowserManager() {
   watch(selectedBrowserId, () => {
     openProfileError.value = "";
     associatedProfilesModal.value = null;
+    profileSelectedIds.value = [];
+    openingSelectedProfiles.value = false;
     cleanupHistorySelectedProfiles.value = [];
     cleanupHistoryResults.value = [];
     cleanupHistoryError.value = "";
@@ -198,23 +202,81 @@ export function useBrowserManager() {
     await Promise.all([loadBrowserConfigs(), scanBrowsers()]);
   }
 
-  async function openBrowserProfile(browserId: string, profileId: string) {
+  async function openBrowserProfile(browserId: string, profileId: string, resetError = true) {
     const profileKey = `${browserId}:${profileId}`;
     openingProfileKey.value = profileKey;
-    openProfileError.value = "";
+    if (resetError) {
+      openProfileError.value = "";
+    }
 
     try {
       await invoke("open_browser_profile", {
         browserId,
         profileId,
       });
+      return true;
     } catch (openError) {
       openProfileError.value =
         openError instanceof Error
           ? openError.message
           : "打开所选浏览器资料失败。";
+      return false;
     } finally {
       openingProfileKey.value = "";
+    }
+  }
+
+  function wait(ms: number) {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, ms);
+    });
+  }
+
+  function toggleProfileSelection(profileId: string) {
+    if (openingSelectedProfiles.value) return;
+
+    if (profileSelectedIds.value.includes(profileId)) {
+      profileSelectedIds.value = profileSelectedIds.value.filter(
+        (selectedId) => selectedId !== profileId,
+      );
+      return;
+    }
+
+    profileSelectedIds.value = [...profileSelectedIds.value, profileId];
+  }
+
+  function toggleAllProfiles() {
+    if (openingSelectedProfiles.value) return;
+
+    const profileIds = sortedProfiles.value.map((profile) => profile.id);
+    const allSelected =
+      profileIds.length > 0 &&
+      profileIds.every((profileId) => profileSelectedIds.value.includes(profileId));
+
+    profileSelectedIds.value = allSelected ? [] : profileIds;
+  }
+
+  async function openSelectedProfiles() {
+    const browser = currentBrowser.value;
+    if (!browser || openingSelectedProfiles.value || !profileSelectedIds.value.length) return;
+
+    const selectedProfiles = sortedProfiles.value.filter((profile) =>
+      profileSelectedIds.value.includes(profile.id),
+    );
+    if (!selectedProfiles.length) return;
+
+    openingSelectedProfiles.value = true;
+    openProfileError.value = "";
+
+    try {
+      for (const [index, profile] of selectedProfiles.entries()) {
+        await openBrowserProfile(browser.browserId, profile.id, false);
+        if (index < selectedProfiles.length - 1) {
+          await wait(900);
+        }
+      }
+    } finally {
+      openingSelectedProfiles.value = false;
     }
   }
 
@@ -1045,12 +1107,15 @@ export function useBrowserManager() {
     loading,
     openProfileError,
     openBrowserProfile,
+    openSelectedProfiles,
+    openingSelectedProfiles,
     page,
     pickExecutablePath,
     pickUserDataPath,
     passwordSiteSortKey,
     passwordSitesError,
     passwordSitesLoading,
+    profileSelectedIds,
     profileSortKey,
     refreshAll,
     savingConfig,
@@ -1073,11 +1138,13 @@ export function useBrowserManager() {
     confirmBookmarkRemoval,
     cleanupHistoryForProfile,
     toggleAllBookmarks,
+    toggleAllProfiles,
     toggleAllExtensions,
     toggleAllBookmarkModalProfiles,
     toggleAllExtensionModalProfiles,
     toggleBookmarkModalProfileSelection,
     toggleBookmarkSelection,
+    toggleProfileSelection,
     toggleExtensionModalProfileSelection,
     toggleExtensionSelection,
     toggleAllHistoryProfiles,

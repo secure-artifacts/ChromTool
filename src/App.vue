@@ -64,12 +64,15 @@ const {
   loadPasswordSites,
   openProfileError,
   openBrowserProfile,
+  openSelectedProfiles,
+  openingSelectedProfiles,
   page,
   pickExecutablePath,
   pickUserDataPath,
   passwordSiteSortKey,
   passwordSitesError,
   passwordSitesLoading,
+  profileSelectedIds,
   profileSortKey,
   refreshAll,
   savingConfig,
@@ -90,10 +93,12 @@ const {
   closeExtensionRemovalResult,
   confirmExtensionRemoval,
   toggleAllBookmarks,
+  toggleAllProfiles,
   toggleAllBookmarkModalProfiles,
   toggleAllExtensions,
   toggleBookmarkModalProfileSelection,
   toggleBookmarkSelection,
+  toggleProfileSelection,
   toggleAllExtensionModalProfiles,
   toggleExtensionModalProfileSelection,
   toggleExtensionSelection,
@@ -186,6 +191,8 @@ const {
         :sorted-extensions="sortedExtensions"
         :sorted-bookmarks="sortedBookmarks"
         :sorted-password-sites="sortedPasswordSites"
+        :profile-selected-ids="profileSelectedIds"
+        :opening-selected-profiles="openingSelectedProfiles"
         :history-selected-profile-ids="cleanupHistorySelectedProfiles"
         :cleanup-history-busy="historyCleanupBusy"
         :history-cleanup-confirm-profiles="historyCleanupConfirmProfiles"
@@ -220,6 +227,9 @@ const {
         @update:password-site-sort-key="passwordSiteSortKey = $event"
         @load-password-sites="loadPasswordSites"
         @open-profile="(browserId, profileId) => openBrowserProfile(browserId, profileId)"
+        @toggle-profile-selection="toggleProfileSelection"
+        @toggle-all-profiles="toggleAllProfiles"
+        @open-selected-profiles="openSelectedProfiles"
         @show-extension-profiles="showExtensionProfilesModal"
         @show-bookmark-profiles="showBookmarkProfilesModal"
         @show-password-site-profiles="showPasswordSiteProfilesModal"

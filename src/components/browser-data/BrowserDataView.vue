@@ -37,6 +37,8 @@ defineProps<{
   sortedExtensions: BrowserView["extensions"];
   sortedBookmarks: BrowserView["bookmarks"];
   sortedPasswordSites: BrowserView["passwordSites"];
+  profileSelectedIds: string[];
+  openingSelectedProfiles: boolean;
   historySelectedProfileIds: string[];
   cleanupHistoryBusy: boolean;
   historyCleanupConfirmProfiles: BrowserView["profiles"];
@@ -86,6 +88,9 @@ const emit = defineEmits<{
   "update:passwordSiteSortKey": [value: PasswordSiteSortKey];
   loadPasswordSites: [];
   openProfile: [browserId: string, profileId: string];
+  toggleProfileSelection: [profileId: string];
+  toggleAllProfiles: [];
+  openSelectedProfiles: [];
   showExtensionProfiles: [extensionId: string];
   showBookmarkProfiles: [url: string];
   showPasswordSiteProfiles: [url: string];
@@ -179,9 +184,14 @@ const emit = defineEmits<{
       :open-profile-error="openProfileError"
       :browser-id="currentBrowser.browserId"
       :browser-family-id="currentBrowser.browserFamilyId"
+      :selected-profile-ids="profileSelectedIds"
+      :open-selected-busy="openingSelectedProfiles"
       :is-opening-profile="isOpeningProfile"
       @update:sort-key="emit('update:profileSortKey', $event)"
       @open-profile="(browserId, profileId) => emit('openProfile', browserId, profileId)"
+      @toggle-profile="emit('toggleProfileSelection', $event)"
+      @toggle-all-profiles="emit('toggleAllProfiles')"
+      @open-selected="emit('openSelectedProfiles')"
     />
 
     <ExtensionsList
