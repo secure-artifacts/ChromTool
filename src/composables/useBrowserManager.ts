@@ -9,6 +9,7 @@ import type {
   AssociatedProfileSummary,
   BookmarkAssociatedProfileSummary,
   BookmarkFilterField,
+  BookmarkFilterPreset,
   BookmarkSortKey,
   BookmarkSummary,
   BrowserConfigEntry,
@@ -80,6 +81,7 @@ export function useBrowserManager() {
   const bookmarkSortDirection = ref<SortDirection>("asc");
   const bookmarkFilterMode = ref<FilterMode>("and");
   const bookmarkFilterRules = ref<FilterRule<BookmarkFilterField>[]>([]);
+  const bookmarkFilterPresets = ref<BookmarkFilterPreset[]>([]);
   const passwordSiteSortKey = ref<PasswordSiteSortKey>("domain");
   const passwordSiteSortDirection = ref<SortDirection>("asc");
   const passwordSitesLoading = ref(false);
@@ -161,14 +163,33 @@ export function useBrowserManager() {
   }
 
   function filterBookmarks(bookmarks: BookmarkSummary[]) {
-    return bookmarks.filter((bookmark) =>
-      matchesRules(bookmarkFilterRules.value, bookmarkFilterMode.value, (field) => {
+    return bookmarks.filter((bookmark) => {
+      if (!matchesBookmarkPresets(bookmark)) return false;
+
+      return matchesRules(bookmarkFilterRules.value, bookmarkFilterMode.value, (field) => {
         if (field === "profileName") return bookmark.profiles.map((profile) => profile.name);
         if (field === "profileId") return bookmark.profileIds;
         if (field === "bookmarkTitle") return [bookmark.title];
         return [bookmark.url];
-      }),
-    );
+      });
+    });
+  }
+
+  function matchesBookmarkPresets(bookmark: BookmarkSummary) {
+    if (!bookmarkFilterPresets.value.length) return true;
+
+    const url = bookmark.url.toLocaleLowerCase();
+    if (bookmarkFilterPresets.value.includes("exclude_meta")) {
+      const metaDomains = ["facebook.com", "instagram.com", "messenger.com"];
+      if (metaDomains.some((domain) => url.includes(domain))) return false;
+    }
+
+    if (bookmarkFilterPresets.value.includes("google_only")) {
+      const googleDomains = ["docs.google.com", "drive.google.com"];
+      if (!googleDomains.some((domain) => url.includes(domain))) return false;
+    }
+
+    return true;
   }
 
   const sortedProfiles = computed(() =>
@@ -1245,6 +1266,7 @@ export function useBrowserManager() {
     associatedProfilesModal,
     bookmarkSortDirection,
     bookmarkSortKey,
+    bookmarkFilterPresets,
     bookmarkDeleteBusy,
     bookmarkModalSelectedProfileIds,
     bookmarkRemovalConfirmBookmarkCount: computed(bookmarkRemovalConfirmBookmarkCount),

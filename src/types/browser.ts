@@ -158,6 +158,7 @@ export type FilterMode = "and" | "or";
 export type FilterOperator = "contains" | "not_contains" | "equals" | "not_equals";
 export type ExtensionFilterField = "profileName" | "profileId" | "extensionName";
 export type BookmarkFilterField = "profileName" | "profileId" | "bookmarkTitle" | "url";
+export type BookmarkFilterPreset = "exclude_meta" | "google_only";
 export type FilterRule<Field extends string = string> = {
   id: string;
   field: Field;

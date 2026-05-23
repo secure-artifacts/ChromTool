@@ -5,6 +5,7 @@ import type {
   BookmarkAssociatedProfileSummary,
   BookmarkSortKey,
   BookmarkFilterField,
+  BookmarkFilterPreset,
   BrowserView,
   ExtensionFilterField,
   ExtensionSortKey,
@@ -49,6 +50,7 @@ defineProps<{
   extensionFilterMode: FilterMode;
   extensionFilterRules: FilterRule<ExtensionFilterField>[];
   bookmarkFilterMode: FilterMode;
+  bookmarkFilterPresets: BookmarkFilterPreset[];
   bookmarkFilterRules: FilterRule<BookmarkFilterField>[];
   profileSelectedIds: string[];
   openingSelectedProfiles: boolean;
@@ -102,6 +104,7 @@ const emit = defineEmits<{
   "update:extensionFilterMode": [value: FilterMode];
   "update:extensionFilterRules": [value: FilterRule<ExtensionFilterField>[]];
   "update:bookmarkFilterMode": [value: FilterMode];
+  "update:bookmarkFilterPresets": [value: BookmarkFilterPreset[]];
   "update:bookmarkFilterRules": [value: FilterRule<BookmarkFilterField>[]];
   loadPasswordSites: [];
   openProfile: [browserId: string, profileId: string];
@@ -240,11 +243,13 @@ const emit = defineEmits<{
       :sort-key="bookmarkSortKey"
       :sort-direction="bookmarkSortDirection"
       :filter-mode="bookmarkFilterMode"
+      :filter-presets="bookmarkFilterPresets"
       :filter-rules="bookmarkFilterRules"
       :selected-bookmark-urls="bookmarkSelectedUrls"
       :delete-busy="bookmarkDeleteBusy"
       @update:sort-key="emit('update:bookmarkSortKey', $event)"
       @update:filter-mode="emit('update:bookmarkFilterMode', $event)"
+      @update:filter-presets="emit('update:bookmarkFilterPresets', $event)"
       @update:filter-rules="emit('update:bookmarkFilterRules', $event)"
       @show-profiles="emit('showBookmarkProfiles', $event)"
       @toggle-bookmark="emit('toggleBookmarkSelection', $event)"

@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 
 import type {
   BookmarkFilterField,
+  BookmarkFilterPreset,
   BookmarkSortKey,
   BookmarkSummary,
   FilterMode,
@@ -17,6 +18,7 @@ const props = defineProps<{
   sortKey: BookmarkSortKey;
   sortDirection: SortDirection;
   filterMode: FilterMode;
+  filterPresets: BookmarkFilterPreset[];
   filterRules: FilterRule<BookmarkFilterField>[];
   selectedBookmarkUrls: string[];
   deleteBusy: boolean;
@@ -25,6 +27,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:sortKey": [value: BookmarkSortKey];
   "update:filterMode": [value: FilterMode];
+  "update:filterPresets": [value: BookmarkFilterPreset[]];
   "update:filterRules": [value: FilterRule<BookmarkFilterField>[]];
   showProfiles: [url: string];
   toggleBookmark: [url: string];
@@ -40,7 +43,9 @@ const allSelected = computed(
 );
 const filterOpen = ref(false);
 const activeFilterCount = computed(
-  () => props.filterRules.filter((rule) => !rule.disabled && rule.value.trim().length > 0).length,
+  () =>
+    props.filterPresets.length +
+    props.filterRules.filter((rule) => !rule.disabled && rule.value.trim().length > 0).length,
 );
 
 function isSelected(url: string) {
@@ -57,6 +62,11 @@ const bookmarkFilterFields: { value: BookmarkFilterField; label: string }[] = [
   { value: "profileId", label: "Profile ID" },
   { value: "bookmarkTitle", label: "书签名称" },
   { value: "url", label: "URL" },
+];
+
+const bookmarkFilterPresets: { value: BookmarkFilterPreset; label: string }[] = [
+  { value: "exclude_meta", label: "不看 FB/IG/MSG" },
+  { value: "google_only", label: "只看谷歌" },
 ];
 </script>
 
@@ -160,9 +170,12 @@ const bookmarkFilterFields: { value: BookmarkFilterField; label: string }[] = [
       v-if="filterOpen"
       title="过滤书签"
       :mode="filterMode"
+      :active-presets="filterPresets"
+      :presets="bookmarkFilterPresets"
       :rules="filterRules"
       :fields="bookmarkFilterFields"
       @update:mode="emit('update:filterMode', $event)"
+      @update:active-presets="emit('update:filterPresets', $event as BookmarkFilterPreset[])"
       @update:rules="emit('update:filterRules', $event)"
       @close="filterOpen = false"
     />

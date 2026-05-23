@@ -7,11 +7,14 @@ const props = defineProps<{
   mode: FilterMode;
   rules: FilterRule<Field>[];
   fields: { value: Field; label: string }[];
+  presets?: { value: string; label: string }[];
+  activePresets?: string[];
 }>();
 
 const emit = defineEmits<{
   "update:mode": [value: FilterMode];
   "update:rules": [value: FilterRule<Field>[]];
+  "update:activePresets": [value: string[]];
   close: [];
 }>();
 
@@ -74,6 +77,20 @@ function removeRule(ruleId: string) {
 function clearRules() {
   emit("update:rules", []);
 }
+
+function isPresetActive(value: string) {
+  return props.activePresets?.includes(value) ?? false;
+}
+
+function togglePreset(value: string) {
+  const activePresets = props.activePresets ?? [];
+  emit(
+    "update:activePresets",
+    activePresets.includes(value)
+      ? activePresets.filter((preset) => preset !== value)
+      : [...activePresets, value],
+  );
+}
 </script>
 
 <template>
@@ -87,22 +104,39 @@ function clearRules() {
       </div>
 
       <div class="filter-mode">
-        <button
-          class="mode-button"
-          :class="{ active: mode === 'and' }"
-          type="button"
-          @click="emit('update:mode', 'and')"
-        >
-          全部满足
-        </button>
-        <button
-          class="mode-button"
-          :class="{ active: mode === 'or' }"
-          type="button"
-          @click="emit('update:mode', 'or')"
-        >
-          任一满足
-        </button>
+        <div class="mode-group">
+          <button
+            class="mode-button"
+            :class="{ active: mode === 'and' }"
+            type="button"
+            @click="emit('update:mode', 'and')"
+          >
+            全部满足
+          </button>
+          <button
+            class="mode-button"
+            :class="{ active: mode === 'or' }"
+            type="button"
+            @click="emit('update:mode', 'or')"
+          >
+            任一满足
+          </button>
+        </div>
+        <template v-if="presets?.length">
+          <div class="filter-divider" aria-hidden="true"></div>
+          <div class="preset-group">
+            <button
+              v-for="preset in presets"
+              :key="preset.value"
+              class="preset-button"
+              :class="{ active: isPresetActive(preset.value) }"
+              type="button"
+              @click="togglePreset(preset.value)"
+            >
+              {{ preset.label }}
+            </button>
+          </div>
+        </template>
       </div>
 
       <div v-if="rules.length" class="filter-rules">
@@ -238,9 +272,14 @@ function clearRules() {
   letter-spacing: -0.03em;
 }
 
-.filter-mode {
-  display: inline-flex;
+.filter-mode,
+.mode-group,
+.preset-group {
+  display: flex;
   align-items: center;
+}
+
+.filter-mode {
   gap: 4px;
   padding: 3px;
   border: 1px solid rgba(148, 163, 184, 0.18);
@@ -248,7 +287,20 @@ function clearRules() {
   background: rgba(255, 255, 255, 0.82);
 }
 
-.mode-button {
+.mode-group,
+.preset-group {
+  gap: 4px;
+}
+
+.filter-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background: rgba(148, 163, 184, 0.24);
+}
+
+.mode-button,
+.preset-button {
   padding: 5px 10px;
   border-radius: 9px;
   color: var(--muted);
@@ -256,7 +308,8 @@ function clearRules() {
   cursor: pointer;
 }
 
-.mode-button.active {
+.mode-button.active,
+.preset-button.active {
   background: rgba(47, 111, 237, 0.1);
   color: var(--accent);
   font-weight: 700;

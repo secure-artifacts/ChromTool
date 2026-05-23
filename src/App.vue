@@ -21,6 +21,7 @@ const {
   bookmarkRemovalResults,
   bookmarkSelectedUrls,
   bookmarkFilterMode,
+  bookmarkFilterPresets,
   bookmarkFilterRules,
   browserConfigs,
   browserMonogram,
@@ -267,6 +268,7 @@ async function refreshCurrentBrowserPreservingScroll() {
         :extension-filter-mode="extensionFilterMode"
         :extension-filter-rules="extensionFilterRules"
         :bookmark-filter-mode="bookmarkFilterMode"
+        :bookmark-filter-presets="bookmarkFilterPresets"
         :bookmark-filter-rules="bookmarkFilterRules"
         :profile-selected-ids="profileSelectedIds"
         :opening-selected-profiles="openingSelectedProfiles"
@@ -305,6 +307,7 @@ async function refreshCurrentBrowserPreservingScroll() {
         @update:extension-filter-mode="extensionFilterMode = $event"
         @update:extension-filter-rules="extensionFilterRules = $event"
         @update:bookmark-filter-mode="bookmarkFilterMode = $event"
+        @update:bookmark-filter-presets="bookmarkFilterPresets = $event"
         @update:bookmark-filter-rules="bookmarkFilterRules = $event"
         @load-password-sites="loadPasswordSites"
         @open-profile="(browserId, profileId) => openBrowserProfile(browserId, profileId)"
