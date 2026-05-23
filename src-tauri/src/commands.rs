@@ -121,7 +121,26 @@ pub fn cleanup_history_files(
 }
 
 #[tauri::command]
-pub fn remove_extensions(
+pub async fn remove_extensions(
+    app: AppHandle,
+    input: RemoveExtensionsInput,
+) -> Result<RemoveExtensionsResponse, String> {
+    async_runtime::spawn_blocking(move || remove_extensions_blocking(app, input))
+        .await
+        .map_err(|error| format!("Failed to join extension removal task: {error}"))?
+}
+
+#[tauri::command]
+pub async fn remove_bookmarks(
+    app: AppHandle,
+    input: RemoveBookmarksInput,
+) -> Result<RemoveBookmarksResponse, String> {
+    async_runtime::spawn_blocking(move || remove_bookmarks_blocking(app, input))
+        .await
+        .map_err(|error| format!("Failed to join bookmark removal task: {error}"))?
+}
+
+fn remove_extensions_blocking(
     app: AppHandle,
     input: RemoveExtensionsInput,
 ) -> Result<RemoveExtensionsResponse, String> {
@@ -149,8 +168,7 @@ pub fn remove_extensions(
     Ok(RemoveExtensionsResponse { results })
 }
 
-#[tauri::command]
-pub fn remove_bookmarks(
+fn remove_bookmarks_blocking(
     app: AppHandle,
     input: RemoveBookmarksInput,
 ) -> Result<RemoveBookmarksResponse, String> {
