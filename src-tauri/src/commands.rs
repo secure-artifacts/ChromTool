@@ -1,4 +1,5 @@
 use std::{
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -183,17 +184,35 @@ fn remove_bookmarks_blocking(
     }
 
     let mut results = Vec::new();
-    for removal in input.removals {
-        for profile_id in &removal.profile_ids {
-            results.push(remove_bookmark_from_profile(
-                &user_data_dir.join(profile_id),
-                &removal,
-                profile_id,
-            ));
-        }
+    for (profile_id, urls) in group_bookmark_removals_by_profile(input.removals) {
+        results.extend(remove_bookmarks_from_profile(
+            &user_data_dir.join(&profile_id),
+            &profile_id,
+            &urls,
+        ));
     }
 
     Ok(RemoveBookmarksResponse { results })
+}
+
+fn group_bookmark_removals_by_profile(
+    removals: Vec<BookmarkRemovalRequest>,
+) -> Vec<(String, Vec<String>)> {
+    let mut removals_by_profile: Vec<(String, Vec<String>)> = Vec::new();
+    for removal in removals {
+        for profile_id in removal.profile_ids {
+            if let Some((_, urls)) = removals_by_profile
+                .iter_mut()
+                .find(|(existing_profile_id, _)| existing_profile_id == &profile_id)
+            {
+                urls.push(removal.url.clone());
+            } else {
+                removals_by_profile.push((profile_id, vec![removal.url.clone()]));
+            }
+        }
+    }
+
+    removals_by_profile
 }
 
 fn spawn_browser_process(
@@ -373,40 +392,38 @@ fn remove_extension_from_profile(
     }
 }
 
-fn remove_bookmark_from_profile(
+fn remove_bookmarks_from_profile(
     profile_path: &Path,
-    removal: &BookmarkRemovalRequest,
     profile_id: &str,
-) -> RemoveBookmarkResult {
+    urls: &[String],
+) -> Vec<RemoveBookmarkResult> {
     if !profile_path.is_dir() {
-        return RemoveBookmarkResult {
-            url: removal.url.clone(),
-            profile_id: profile_id.to_string(),
-            removed_count: 0,
-            removed_files: Vec::new(),
-            skipped_files: Vec::new(),
-            error: Some(format!(
+        return bookmark_error_results(
+            urls,
+            profile_id,
+            Vec::new(),
+            Vec::new(),
+            format!(
                 "Profile directory does not exist: {}",
                 profile_path.display()
-            )),
-        };
+            ),
+        );
     }
 
     let mut removed_files = Vec::new();
     let mut skipped_files = Vec::new();
 
-    let removed_backup =
-        remove_bookmark_backups(profile_path).map_err(|error| RemoveBookmarkResult {
-            url: removal.url.clone(),
-            profile_id: profile_id.to_string(),
-            removed_count: 0,
-            removed_files: removed_files.clone(),
-            skipped_files: skipped_files.clone(),
-            error: Some(error),
-        });
-    let removed_backup = match removed_backup {
+    let removed_backup = match remove_bookmark_backups(profile_path) {
         Ok(value) => value,
-        Err(result) => return result,
+        Err(error) => {
+            return bookmark_error_results(
+                urls,
+                profile_id,
+                removed_files,
+                skipped_files,
+                error,
+            );
+        }
     };
     if removed_backup {
         removed_files.push(decoded_literal("Qm9va21hcmtzLmJhaw=="));
@@ -415,30 +432,28 @@ fn remove_bookmark_from_profile(
     }
 
     let Some(bookmarks_path) = resolve_bookmarks_path(profile_path) else {
-        return RemoveBookmarkResult {
-            url: removal.url.clone(),
-            profile_id: profile_id.to_string(),
-            removed_count: 0,
+        return bookmark_error_results(
+            urls,
+            profile_id,
             removed_files,
             skipped_files,
-            error: Some(format!(
+            format!(
                 "Bookmarks file does not exist in {}",
                 profile_path.display()
-            )),
-        };
+            ),
+        );
     };
 
     let mut document = match read_json_document(&bookmarks_path) {
         Ok(document) => document,
         Err(error) => {
-            return RemoveBookmarkResult {
-                url: removal.url.clone(),
-                profile_id: profile_id.to_string(),
-                removed_count: 0,
+            return bookmark_error_results(
+                urls,
+                profile_id,
                 removed_files,
                 skipped_files,
-                error: Some(error),
-            };
+                error,
+            );
         }
     };
 
@@ -446,32 +461,55 @@ fn remove_bookmark_from_profile(
         .as_object_mut()
         .and_then(|object| object.remove("checksum"))
         .is_some();
-    let removed_count = remove_matching_bookmarks(&mut document, &removal.url);
+    let target_urls: HashSet<String> = urls.iter().cloned().collect();
+    let mut removed_counts = HashMap::new();
+    remove_matching_bookmarks_by_url(&mut document, &target_urls, &mut removed_counts);
+    let removed_any = removed_counts.values().any(|count| *count > 0);
 
-    if checksum_removed || removed_count > 0 {
+    if checksum_removed || removed_any {
         if let Err(error) = write_json_document(&bookmarks_path, &document) {
-            return RemoveBookmarkResult {
-                url: removal.url.clone(),
-                profile_id: profile_id.to_string(),
-                removed_count: 0,
+            return bookmark_error_results(
+                urls,
+                profile_id,
                 removed_files,
                 skipped_files,
-                error: Some(error),
-            };
+                error,
+            );
         }
         removed_files.push(decoded_literal("Qm9va21hcmtz"));
     } else {
         skipped_files.push(decoded_literal("Qm9va21hcmtz"));
     }
 
-    RemoveBookmarkResult {
-        url: removal.url.clone(),
-        profile_id: profile_id.to_string(),
-        removed_count,
-        removed_files,
-        skipped_files,
-        error: None,
-    }
+    urls.iter()
+        .map(|url| RemoveBookmarkResult {
+            url: url.clone(),
+            profile_id: profile_id.to_string(),
+            removed_count: *removed_counts.get(url).unwrap_or(&0),
+            removed_files: removed_files.clone(),
+            skipped_files: skipped_files.clone(),
+            error: None,
+        })
+        .collect()
+}
+
+fn bookmark_error_results(
+    urls: &[String],
+    profile_id: &str,
+    removed_files: Vec<String>,
+    skipped_files: Vec<String>,
+    error: String,
+) -> Vec<RemoveBookmarkResult> {
+    urls.iter()
+        .map(|url| RemoveBookmarkResult {
+            url: url.clone(),
+            profile_id: profile_id.to_string(),
+            removed_count: 0,
+            removed_files: removed_files.clone(),
+            skipped_files: skipped_files.clone(),
+            error: Some(error.clone()),
+        })
+        .collect()
 }
 
 fn remove_extension_from_secure_preferences(
@@ -661,29 +699,37 @@ fn decoded_literal(encoded: &str) -> String {
     decode_base64_literal(encoded).unwrap_or_default()
 }
 
-fn remove_matching_bookmarks(value: &mut Value, target_url: &str) -> usize {
+fn remove_matching_bookmarks_by_url(
+    value: &mut Value,
+    target_urls: &HashSet<String>,
+    removed_counts: &mut HashMap<String, usize>,
+) {
     match value {
         Value::Object(object) => {
-            let mut removed_count = 0;
-
             if let Some(children) = object.get_mut("children").and_then(Value::as_array_mut) {
                 let mut index = 0;
                 while index < children.len() {
-                    let matches_url = children[index]
-                        .as_object()
-                        .map(|child| {
-                            child.get("type").and_then(Value::as_str) == Some("url")
-                                && child.get("url").and_then(Value::as_str) == Some(target_url)
-                        })
-                        .unwrap_or(false);
+                    let matched_url = children[index].as_object().and_then(|child| {
+                        let url = child.get("url").and_then(Value::as_str)?;
+                        let is_url = child.get("type").and_then(Value::as_str) == Some("url");
+                        if is_url && target_urls.contains(url) {
+                            Some(url.to_string())
+                        } else {
+                            None
+                        }
+                    });
 
-                    if matches_url {
+                    if let Some(url) = matched_url {
                         children.remove(index);
-                        removed_count += 1;
+                        *removed_counts.entry(url).or_insert(0) += 1;
                         continue;
                     }
 
-                    removed_count += remove_matching_bookmarks(&mut children[index], target_url);
+                    remove_matching_bookmarks_by_url(
+                        &mut children[index],
+                        target_urls,
+                        removed_counts,
+                    );
                     index += 1;
                 }
             }
@@ -692,15 +738,113 @@ fn remove_matching_bookmarks(value: &mut Value, target_url: &str) -> usize {
                 if key == "children" {
                     continue;
                 }
-                removed_count += remove_matching_bookmarks(child, target_url);
+                remove_matching_bookmarks_by_url(child, target_urls, removed_counts);
             }
-
-            removed_count
         }
-        Value::Array(array) => array
-            .iter_mut()
-            .map(|item| remove_matching_bookmarks(item, target_url))
-            .sum(),
-        _ => 0,
+        Value::Array(array) => {
+            for item in array {
+                remove_matching_bookmarks_by_url(item, target_urls, removed_counts);
+            }
+        }
+        _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn groups_bookmark_removals_by_profile() {
+        let grouped = group_bookmark_removals_by_profile(vec![
+            BookmarkRemovalRequest {
+                url: "https://docs.google.com/a".to_string(),
+                profile_ids: vec!["Default".to_string(), "Profile 1".to_string()],
+            },
+            BookmarkRemovalRequest {
+                url: "https://drive.google.com/b".to_string(),
+                profile_ids: vec!["Default".to_string()],
+            },
+            BookmarkRemovalRequest {
+                url: "https://example.com/c".to_string(),
+                profile_ids: vec!["Profile 1".to_string()],
+            },
+        ]);
+
+        assert_eq!(
+            grouped,
+            vec![
+                (
+                    "Default".to_string(),
+                    vec![
+                        "https://docs.google.com/a".to_string(),
+                        "https://drive.google.com/b".to_string(),
+                    ],
+                ),
+                (
+                    "Profile 1".to_string(),
+                    vec![
+                        "https://docs.google.com/a".to_string(),
+                        "https://example.com/c".to_string(),
+                    ],
+                ),
+            ],
+        );
+    }
+
+    #[test]
+    fn removes_multiple_bookmark_urls_in_one_tree_pass() {
+        let mut document = json!({
+            "roots": {
+                "bookmark_bar": {
+                    "children": [
+                        {
+                            "type": "url",
+                            "name": "Docs",
+                            "url": "https://docs.google.com/a"
+                        },
+                        {
+                            "type": "folder",
+                            "name": "Nested",
+                            "children": [
+                                {
+                                    "type": "url",
+                                    "name": "Drive",
+                                    "url": "https://drive.google.com/b"
+                                },
+                                {
+                                    "type": "url",
+                                    "name": "Keep",
+                                    "url": "https://example.com/keep"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "other": {
+                    "children": [
+                        {
+                            "type": "url",
+                            "name": "Docs duplicate",
+                            "url": "https://docs.google.com/a"
+                        }
+                    ]
+                }
+            }
+        });
+        let target_urls = HashSet::from([
+            "https://docs.google.com/a".to_string(),
+            "https://drive.google.com/b".to_string(),
+        ]);
+        let mut removed_counts = HashMap::new();
+
+        remove_matching_bookmarks_by_url(&mut document, &target_urls, &mut removed_counts);
+
+        assert_eq!(removed_counts.get("https://docs.google.com/a"), Some(&2));
+        assert_eq!(removed_counts.get("https://drive.google.com/b"), Some(&1));
+        assert!(document.to_string().contains("https://example.com/keep"));
+        assert!(!document.to_string().contains("https://docs.google.com/a"));
+        assert!(!document.to_string().contains("https://drive.google.com/b"));
     }
 }
