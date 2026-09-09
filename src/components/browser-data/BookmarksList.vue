@@ -66,6 +66,7 @@ const bookmarkFilterFields: { value: BookmarkFilterField; label: string }[] = [
 
 const bookmarkFilterPresets: { value: BookmarkFilterPreset; label: string }[] = [
   { value: "exclude_meta", label: "不看 FB/IG/MSG" },
+  { value: "exclude_youtube", label: "不看 Youtube" },
   { value: "google_only", label: "只看谷歌" },
 ];
 </script>

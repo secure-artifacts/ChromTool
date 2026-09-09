@@ -193,6 +193,13 @@ export function useBrowserManager() {
       if (metaUrlPrefixes.some((prefix) => url.startsWith(prefix))) return false;
     }
 
+    if (
+      bookmarkFilterPresets.value.includes("exclude_youtube") &&
+      url.startsWith("https://www.youtube.com")
+    ) {
+      return false;
+    }
+
     if (bookmarkFilterPresets.value.includes("google_only")) {
       const googleDomains = ["docs.google.com", "drive.google.com"];
       if (!googleDomains.some((domain) => url.includes(domain))) return false;

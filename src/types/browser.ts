@@ -164,7 +164,7 @@ export type FilterOperator =
   | "not_starts_with";
 export type ExtensionFilterField = "profileName" | "profileId" | "extensionName";
 export type BookmarkFilterField = "profileName" | "profileId" | "bookmarkTitle" | "url";
-export type BookmarkFilterPreset = "exclude_meta" | "google_only";
+export type BookmarkFilterPreset = "exclude_meta" | "exclude_youtube" | "google_only";
 export type FilterRule<Field extends string = string> = {
   id: string;
   field: Field;
