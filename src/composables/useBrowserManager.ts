@@ -185,8 +185,12 @@ export function useBrowserManager() {
 
     const url = bookmark.url.toLocaleLowerCase();
     if (bookmarkFilterPresets.value.includes("exclude_meta")) {
-      const metaDomains = ["facebook.com", "instagram.com", "messenger.com"];
-      if (metaDomains.some((domain) => url.includes(domain))) return false;
+      const metaUrlPrefixes = [
+        "https://www.facebook.com",
+        "https://www.instagram.com",
+        "https://www.messenger.com",
+      ];
+      if (metaUrlPrefixes.some((prefix) => url.startsWith(prefix))) return false;
     }
 
     if (bookmarkFilterPresets.value.includes("google_only")) {
