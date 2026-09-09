@@ -183,6 +183,7 @@ export type BrowserConfigEntry = {
   iconKey: string | null;
   name: string;
   executablePath: string;
+  executableFound: boolean;
   userDataPath: string;
   deletable: boolean;
 };

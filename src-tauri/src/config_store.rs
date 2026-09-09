@@ -7,7 +7,7 @@ use std::{
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    browsers::{browser_definitions, resolve_browser_executable},
+    browsers::{browser_definitions, default_browser_executable, resolve_browser_executable},
     models::{
         BrowserConfigEntry, BrowserConfigListResponse, BrowserConfigSource,
         CreateCustomBrowserConfigInput, CustomBrowserConfigRecord, StoredBrowserConfigs,
@@ -37,6 +37,7 @@ pub fn resolve_browser_configs(app: &AppHandle) -> Result<Vec<BrowserConfigEntry
                 browser_family_id: config.browser_family_id.or(config.icon_key.clone()),
                 icon_key: config.icon_key,
                 name: config.name,
+                executable_found: PathBuf::from(&config.executable_path).is_file(),
                 executable_path: config.executable_path,
                 user_data_path: config.user_data_path,
                 deletable: true,
@@ -125,13 +126,18 @@ fn default_browser_configs() -> Result<Vec<BrowserConfigEntry>, String> {
                 .iter()
                 .fold(user_data_root.clone(), |path, segment| path.join(segment));
 
+            let executable = resolve_browser_executable(definition.id);
+            let executable_found = executable.is_some();
+
             BrowserConfigEntry {
                 id: definition.id.to_string(),
                 source: BrowserConfigSource::Default,
                 browser_family_id: Some(definition.id.to_string()),
                 icon_key: Some(definition.id.to_string()),
                 name: definition.name.to_string(),
-                executable_path: resolve_browser_executable(definition.id)
+                executable_found,
+                executable_path: executable
+                    .or_else(|| default_browser_executable(definition.id))
                     .map(|path| path.display().to_string())
                     .unwrap_or_default(),
                 user_data_path: user_data_path.display().to_string(),

@@ -245,6 +245,7 @@ pub struct BrowserConfigEntry {
     pub icon_key: Option<String>,
     pub name: String,
     pub executable_path: String,
+    pub executable_found: bool,
     pub user_data_path: String,
     pub deletable: bool,
 }

@@ -135,6 +135,10 @@ const iconOptions = computed(() =>
             <div>
               <div class="config-title-row">
                 <h4>{{ config.name }}</h4>
+                <span
+                  v-if="config.source === 'default' && !config.executableFound"
+                  class="config-missing-badge"
+                >未找到</span>
               </div>
             </div>
           </div>
@@ -151,7 +155,7 @@ const iconOptions = computed(() =>
         <div class="config-meta">
           <div class="config-meta-row">
             <span class="config-label">可执行文件</span>
-            <p :title="config.executablePath">{{ config.executablePath || "未找到" }}</p>
+            <p :title="config.executablePath">{{ config.executablePath }}</p>
           </div>
           <div class="config-meta-row">
             <span class="config-label">用户资料</span>
@@ -289,6 +293,18 @@ const iconOptions = computed(() =>
   gap: 10px;
   min-width: 0;
   flex: 1;
+}
+
+.config-missing-badge {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  font-weight: 500;
 }
 
 .config-icon {

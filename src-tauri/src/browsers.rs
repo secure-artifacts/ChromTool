@@ -173,6 +173,14 @@ pub fn browser_definition_by_id(browser_id: &str) -> Option<BrowserDefinition> {
         .find(|definition| definition.id == browser_id)
 }
 
+pub fn default_browser_executable(browser_id: &str) -> Option<PathBuf> {
+    let definition = browser_definition_by_id(browser_id)?;
+    definition
+        .executable_candidates
+        .iter()
+        .find_map(resolve_executable_candidate)
+}
+
 pub fn resolve_browser_executable(browser_id: &str) -> Option<PathBuf> {
     let definition = browser_definition_by_id(browser_id)?;
     definition
