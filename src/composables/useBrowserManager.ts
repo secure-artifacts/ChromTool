@@ -134,6 +134,11 @@ export function useBrowserManager() {
       return operator === "contains" ? contains : !contains;
     }
 
+    if (operator === "starts_with" || operator === "not_starts_with") {
+      const startsWith = normalizedValues.some((item) => item.startsWith(needle));
+      return operator === "starts_with" ? startsWith : !startsWith;
+    }
+
     const equals = normalizedValues.some((item) => item === needle);
     return operator === "equals" ? equals : !equals;
   }

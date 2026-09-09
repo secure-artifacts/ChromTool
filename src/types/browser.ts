@@ -155,7 +155,13 @@ export type PasswordSiteSortKey = "domain" | "url";
 export type AssociatedProfileSortKey = "id" | "name";
 export type SortDirection = "asc" | "desc";
 export type FilterMode = "and" | "or";
-export type FilterOperator = "contains" | "not_contains" | "equals" | "not_equals";
+export type FilterOperator =
+  | "contains"
+  | "not_contains"
+  | "equals"
+  | "not_equals"
+  | "starts_with"
+  | "not_starts_with";
 export type ExtensionFilterField = "profileName" | "profileId" | "extensionName";
 export type BookmarkFilterField = "profileName" | "profileId" | "bookmarkTitle" | "url";
 export type BookmarkFilterPreset = "exclude_meta" | "google_only";

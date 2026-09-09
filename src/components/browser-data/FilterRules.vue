@@ -23,6 +23,8 @@ const operators: { value: FilterOperator; label: string }[] = [
   { value: "not_contains", label: "不包含" },
   { value: "equals", label: "等于" },
   { value: "not_equals", label: "不等于" },
+  { value: "starts_with", label: "以开头" },
+  { value: "not_starts_with", label: "不以开头" },
 ];
 
 const openSelectKey = ref("");
